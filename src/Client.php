@@ -1888,6 +1888,7 @@ class Client extends BaseClient
         $url = "retailer/subscriptions/test/{$subscriptionId}";
         $options = [
             'produces' => 'application/vnd.retailer.v10+json',
+            'consumes' => 'application/vnd.retailer.v10+json',
         ];
         $responseTypes = [
             '202' => Model\ProcessStatus::class,
