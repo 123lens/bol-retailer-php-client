@@ -447,6 +447,11 @@ class BaseClient
             $httpOptions['body'] = json_encode($options['body']->toArray(true));
         }
 
+        // add Content-type header if `consumes` is set and not yet present
+        if (!empty($options['consumes']) && empty($httpOptions['headers']['Content-Type'])) {
+            $httpOptions['headers']['Content-Type'] = $options['consumes'];
+        }
+
         // pass through query parameters without null values
         if (isset($options['query'])) {
             $httpOptions['query'] = array_filter($options['query'], function ($value) {
