@@ -10,6 +10,7 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use Picqer\BolRetailerV10\Exception\RateLimitException;
 use Picqer\BolRetailerV10\Exception\ServerException;
+use Picqer\BolRetailerV10\Exception\ViolationException;
 use Picqer\BolRetailerV10\Model\AbstractModel;
 use Picqer\BolRetailerV10\Exception\ConnectException;
 use Picqer\BolRetailerV10\Exception\Exception;
@@ -561,10 +562,19 @@ class BaseClient
             $message = $data['detail'] ??
                 $data['error_description'] ??
                 $statusCode . ' ' . $response->getReasonPhrase();
+            if ($statusCode == 400) {
+
+            }
+
+            if ($statusCode == 400 && isset($data['violations'])) {
+                throw new ViolationException($data['violations']);
+            }
 
             if ($statusCode == 401) {
                 throw new UnauthorizedException($message, $statusCode);
-            } if ($statusCode == 429) {
+            }
+
+            if ($statusCode == 429) {
                 $retryAfter = null;
                 if ($response->hasHeader('Retry-After')) {
                     $retryAfter = (int) $response->getHeader('Retry-After')[0];
