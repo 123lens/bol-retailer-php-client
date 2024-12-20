@@ -547,32 +547,34 @@ class BaseClient
 
             $statusCode = $response->getStatusCode();
 
-            $message = $data['detail'] ??
-                $data['error_description'] ??
-                $statusCode . ' ' . $response->getReasonPhrase();
-            if ($statusCode == 400) {
+            if ($statusCode >= 400) {
+                $message = $data['detail'] ??
+                    $data['error_description'] ??
+                    $statusCode . ' ' . $response->getReasonPhrase();
 
-            }
-
-            if ($statusCode == 400 && isset($data['violations'])) {
-                throw new ViolationException($data['violations']);
-            }
-
-            if ($statusCode == 401) {
-                throw new UnauthorizedException($message, $statusCode);
-            }
-
-            if ($statusCode == 429) {
-                $retryAfter = null;
-                if ($response->hasHeader('Retry-After')) {
-                    $retryAfter = (int) $response->getHeader('Retry-After')[0];
+                if (isset($data['violations'])) {
+                    throw new ViolationException($data['violations']);
                 }
 
-                throw new RateLimitException($message, $statusCode, null, $retryAfter);
-            } elseif (in_array($statusCode, [500, 502, 503, 504, 507])) {
-                throw new ServerException($message, $statusCode);
-            } elseif ($statusCode != 404) {
-                throw new ResponseException($message, $statusCode);
+                match ($statusCode) {
+                    401 => throw new UnauthorizedException($message, $statusCode),
+                    404 => !empty($data['detail']) ?
+                        throw new ResponseException($message, $statusCode)
+                        : null,
+                    429 => throw new RateLimitException(
+                        $message,
+                        $statusCode,
+                        null,
+                        $response->hasHeader('Retry-After')
+                            ? (int)$response->getHeader('Retry-After')[0]
+                            : null
+                    ),
+                    500, 502, 503, 504, 507 => throw new ServerException($message, $statusCode),
+
+                    default => $statusCode != 404
+                        ? throw new ResponseException($message, $statusCode)
+                        : null,
+                };
             }
         } catch (GuzzleException $guzzleException) {
             throw new Exception(
