@@ -1799,7 +1799,7 @@ class Client extends BaseClient
             'produces' => 'application/vnd.retailer.v10+pdf',
         ];
         $responseTypes = [
-            '200' => 'string',
+            '200' => 'array',
             '404' => 'null',
         ];
 

@@ -482,7 +482,7 @@ class BaseClient
      * @param ResponseInterface $response HTTP Response
      * @param array $responseTypes Expected response type per HTTP status code
      * @param string $url Url
-     * @return string|null
+     * @return string|array|null
      * @throws ResponseException
      */
     private function decodeResponse(ResponseInterface $response, array $responseTypes, string $url)
@@ -503,6 +503,14 @@ class BaseClient
         // return raw body if response type is string
         if ($responseType == 'string') {
             return (string)$response->getBody();
+        }
+
+        if ($responseType == 'array') {
+            // return body and headers
+            return [
+                'body' => (string)$response->getBody(),
+                'headers' => $response->getHeaders(),
+            ];
         }
 
         // create new instance of model and fill it with the response data
