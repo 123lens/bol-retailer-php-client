@@ -1779,14 +1779,14 @@ class Client extends BaseClient
      * response. If you are only interested in the metadata, you can do a HEAD request to retrieve only the headers
      * without the label data.
      * @param string $shippingLabelId The shipping label id.
-     * @return string|null
+     * @return array|null
      * @throws Exception\ConnectException when an error occurred in the HTTP connection.
      * @throws Exception\ResponseException when an unexpected response was received.
      * @throws Exception\UnauthorizedException when the request was unauthorized.
      * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
      * @throws Exception\Exception when something unexpected went wrong.
      */
-    public function getShippingLabel(string $shippingLabelId): ?string
+    public function getShippingLabel(string $shippingLabelId): ?array
     {
         $url = "retailer/shipping-labels/{$shippingLabelId}";
         $options = [
