@@ -7,6 +7,16 @@ use Picqer\BolRetailerV10\Model\EconomicOperator;
 
 class Client extends BaseClient
 {
+    /**
+     * @todo: Refactor to auto generation using the Swagger Specs (Specifications currently unavailable)
+     * @param string $id
+     * @return EconomicOperator
+     * @throws Exception\ConnectException
+     * @throws Exception\Exception
+     * @throws Exception\RateLimitException
+     * @throws Exception\ResponseException
+     * @throws Exception\UnauthorizedException
+     */
     public function getEconomicOperator(string $id): EconomicOperator
     {
         $url = "retailer/economic-operator/{$id}";
