@@ -31,6 +31,37 @@ class Client extends BaseClient
         return $this->request('GET', $url, $options, $responseTypes);
     }
 
+    /**
+     * @todo: Refactor to auto generation using the Swagger Specs (Specifications currently unavailable)
+     * @param string $search
+     * @param int $page
+     * @param int $pageSize
+     * @return array|Model\AbstractModel|string|null
+     * @throws Exception\ConnectException
+     * @throws Exception\Exception
+     * @throws Exception\RateLimitException
+     * @throws Exception\ResponseException
+     * @throws Exception\UnauthorizedException
+     */
+    public function queryEconomicOperator(string $search, int $page = 1, int $pageSize = 25)
+    {
+        $url = "retailer/economic-operators";
+        $options = [
+            'query' => [
+                'name' => $search,
+                'page' => $page,
+                'page-size' => $pageSize,
+            ],
+            'produces' => 'application/vnd.retailer.v10+json',
+        ];
+
+        $responseTypes = [
+            '200' => Model\EconomicOperators::class,
+            '404' => 'null',
+        ];
+
+        return $this->request('GET', $url, $options, $responseTypes);
+    }
 
     /**
      * Gets all commissions and possible reductions by EAN, price, and optionally condition.
