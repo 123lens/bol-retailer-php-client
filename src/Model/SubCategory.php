@@ -13,12 +13,15 @@ class SubCategory extends AbstractModel
      * model: Model class or null if it is a scalar type
      * array: Boolean whether it is an array
      * @return array The model definition
+     * @todo: The 'subcategories' was added manually, as it's missing from the swagger specs
+     *          This should be removed and auto generated as soon as Bol has updated their specs
      */
     public function getModelDefinition(): array
     {
         return [
             'id' => [ 'model' => null, 'enum' => null, 'array' => false ],
             'name' => [ 'model' => null, 'enum' => null, 'array' => false ],
+            'subcategories' => [ 'model' => SubCategory::class, 'enum' => null, 'array' => true ],
         ];
     }
 
