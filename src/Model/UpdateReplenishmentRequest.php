@@ -20,7 +20,7 @@ class UpdateReplenishmentRequest extends AbstractModel
             'state' => [ 'model' => null, 'enum' => Enum\UpdateReplenishmentRequestState::class, 'array' => false ],
             'deliveryInfo' => [ 'model' => UpdateDeliveryInfo::class, 'enum' => null, 'array' => false ],
             'numberOfLoadCarriers' => [ 'model' => null, 'enum' => null, 'array' => false ],
-            'loadCarriers' => [ 'model' => UpdateLoadCarrier::class, 'enum' => null, 'array' => true ],
+            'loadCarriers' => [ 'model' => UpdateLoadCarrier::class, 'enum' => null, 'array' => true, 'removeEmpty' => true ],
         ];
     }
 

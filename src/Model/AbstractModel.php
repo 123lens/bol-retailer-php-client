@@ -80,6 +80,10 @@ abstract class AbstractModel
                 $data[$field] = array_map(function ($model) use ($omitNullValues) {
                     return $model->toArray($omitNullValues);
                 }, array_values($this->$field));
+
+                if (($definition['removeEmpty'] ?? false) && count($data[$field]) === 0) {
+                    unset($data[$field]);
+                }
             } else {
                 $data[$field] = $this->$field->toArray($omitNullValues);
             }
