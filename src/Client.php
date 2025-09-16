@@ -22,7 +22,7 @@ class Client extends BaseClient
     {
         $url = "retailer/economic-operator/{$id}";
         $options = [
-            'produces' => 'application/vnd.retailer.v10+json',
+            'produces' => 'application/vnd.economic-operator.v1+json',
         ];
         $responseTypes = [
             '200' => Model\EconomicOperator::class,
@@ -53,7 +53,7 @@ class Client extends BaseClient
                 'page' => $page,
                 'page-size' => $pageSize,
             ],
-            'produces' => 'application/vnd.retailer.v10+json',
+            'produces' => 'application/vnd.economic-operator.v1+json',
         ];
 
         $responseTypes = [
