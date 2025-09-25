@@ -34,4 +34,9 @@ class SubCategory extends AbstractModel
      * @var string The name of the subcategory which the product belongs to.
      */
     public $name;
+
+    /**
+     * @var SubCategory[] The subcategories which the product belongs to.
+     */
+    public $subcategories = [];
 }
