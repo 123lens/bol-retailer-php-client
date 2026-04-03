@@ -448,8 +448,8 @@ class BaseClient
             $httpOptions['body'] = json_encode($options['body']->toArray(true));
         }
 
-        // add Content-type header if `consumes` is set and not yet present
-        if (!empty($options['consumes']) && empty($httpOptions['headers']['Content-Type'])) {
+        // add Content-type header if `consumes` is set and not yet present (and no multipart)
+        if (!empty($options['consumes']) && empty($httpOptions['headers']['Content-Type']) && !isset($options['multipart'])) {
             $httpOptions['headers']['Content-Type'] = $options['consumes'];
         }
 
