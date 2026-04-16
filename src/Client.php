@@ -482,6 +482,7 @@ class Client extends BaseClient
      * Creates a new offer, and adds it to the catalog. After creation, status information can be retrieved to review if
      * the offer is valid and published to the shop.
      * @param Model\CreateOfferRequest $createOfferRequest
+     * @param string|null $XFulfilmentParty
      * @return Model\ProcessStatus
      * @throws Exception\ConnectException when an error occurred in the HTTP connection.
      * @throws Exception\ResponseException when an unexpected response was received.
@@ -489,7 +490,7 @@ class Client extends BaseClient
      * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
      * @throws Exception\Exception when something unexpected went wrong.
      */
-    public function postOffer(Model\CreateOfferRequest $createOfferRequest): Model\ProcessStatus
+    public function postOffer(Model\CreateOfferRequest $createOfferRequest, ?string $XFulfilmentParty = null): Model\ProcessStatus
     {
         $url = "retailer/offers";
         $options = [
@@ -502,6 +503,45 @@ class Client extends BaseClient
         ];
 
         return $this->request('POST', $url, $options, $responseTypes);
+    }
+
+    /**
+     * Get offers
+     * @param array $offerIds List of offer ids to search for.
+     * @param array $eans List of eans to search for
+     * @param string|null $reference Filter offers by reference.
+     * @param bool|null $forSale Filter offers based on whether they are for sale.
+     * @param string|null $lastModifiedDateTime Filter offers updated since the specified date-time. The timestamp
+     * should be in ISO 8601 format (UTC).
+     * @param int|null $pageSize The number of offers per page.
+     * @param string|null $cursor Cursor token used to retrieve the next page of results.
+     * @return Model\OfferListResponse
+     * @throws Exception\ConnectException when an error occurred in the HTTP connection.
+     * @throws Exception\ResponseException when an unexpected response was received.
+     * @throws Exception\UnauthorizedException when the request was unauthorized.
+     * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
+     * @throws Exception\Exception when something unexpected went wrong.
+     */
+    public function getOffers(array $offerIds = [], array $eans = [], ?string $reference = null, ?bool $forSale = null, ?string $lastModifiedDateTime = null, ?int $pageSize = null, ?string $cursor = null): Model\OfferListResponse
+    {
+        $url = "retailer/offers";
+        $options = [
+            'query' => [
+                'offer-ids' => $offerIds,
+                'eans' => $eans,
+                'reference' => $reference,
+                'for-sale' => $forSale,
+                'last-modified-date-time' => $lastModifiedDateTime,
+                'page-size' => $pageSize,
+                'cursor' => $cursor,
+            ],
+            'produces' => 'application/vnd.retailer.v11+json',
+        ];
+        $responseTypes = [
+            '200' => Model\OfferListResponse::class,
+        ];
+
+        return $this->request('GET', $url, $options, $responseTypes);
     }
 
     /**
@@ -676,6 +716,32 @@ class Client extends BaseClient
     }
 
     /**
+     * Update an offer
+     * @param string $offerId The unique identifier of the offer to be updated.
+     * @param Model\PatchOfferRequest $patchOfferRequest
+     * @return Model\ProcessStatus
+     * @throws Exception\ConnectException when an error occurred in the HTTP connection.
+     * @throws Exception\ResponseException when an unexpected response was received.
+     * @throws Exception\UnauthorizedException when the request was unauthorized.
+     * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
+     * @throws Exception\Exception when something unexpected went wrong.
+     */
+    public function updateOffer(string $offerId, Model\PatchOfferRequest $patchOfferRequest): Model\ProcessStatus
+    {
+        $url = "retailer/offers/{$offerId}";
+        $options = [
+            'body' => $patchOfferRequest,
+            'produces' => 'application/vnd.retailer.v11+json',
+            'consumes' => 'application/vnd.retailer.v11+json',
+        ];
+        $responseTypes = [
+            '202' => Model\ProcessStatus::class,
+        ];
+
+        return $this->request('PATCH', $url, $options, $responseTypes);
+    }
+
+    /**
      * Update price(s) for offer by id.
      * @param string $offerId Unique identifier for an offer.
      * @param Model\Pricing $pricing
@@ -705,6 +771,7 @@ class Client extends BaseClient
      * Update stock for offer by id.
      * @param string $offerId Unique identifier for an offer.
      * @param Model\UpdateOfferStockRequest $updateOfferStockRequest
+     * @param string|null $XFulfilmentParty
      * @return Model\ProcessStatus
      * @throws Exception\ConnectException when an error occurred in the HTTP connection.
      * @throws Exception\ResponseException when an unexpected response was received.
@@ -712,7 +779,7 @@ class Client extends BaseClient
      * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
      * @throws Exception\Exception when something unexpected went wrong.
      */
-    public function updateOfferStock(string $offerId, Model\UpdateOfferStockRequest $updateOfferStockRequest): Model\ProcessStatus
+    public function updateOfferStock(string $offerId, Model\UpdateOfferStockRequest $updateOfferStockRequest, ?string $XFulfilmentParty = null): Model\ProcessStatus
     {
         $url = "retailer/offers/{$offerId}/stock";
         $options = [
@@ -945,7 +1012,9 @@ class Client extends BaseClient
      * @param Enum\GetCompetingOffersCountryCode|null $countryCode Countries in which this offer is currently on sale in
      * the webshop, in ISO-3166-1 format.
      * @param bool|null $bestOfferOnly Indicator to request the best offer within the country for the requested EAN.
-     * @param Enum\GetCompetingOffersCondition|null $condition The condition of the offered product.
+     * @param Enum\GetCompetingOffersCondition|null $condition The condition of the offered product (default='NEW').
+     * @param bool|null $includeRefurbishedConditions Flag to include new refurbished values 'REFURBISHED_A',
+     * 'REFURBISHED_B' and 'REFURBISHED_C' for condition field in the response.
      * @return Model\Offer[]
      * @throws Exception\ConnectException when an error occurred in the HTTP connection.
      * @throws Exception\ResponseException when an unexpected response was received.
@@ -953,7 +1022,7 @@ class Client extends BaseClient
      * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
      * @throws Exception\Exception when something unexpected went wrong.
      */
-    public function getCompetingOffers(string $ean, ?int $page = 1, ?Enum\GetCompetingOffersCountryCode $countryCode = null, ?bool $bestOfferOnly = false, ?Enum\GetCompetingOffersCondition $condition = null): array
+    public function getCompetingOffers(string $ean, ?int $page = 1, ?Enum\GetCompetingOffersCountryCode $countryCode = null, ?bool $bestOfferOnly = false, ?Enum\GetCompetingOffersCondition $condition = null, ?bool $includeRefurbishedConditions = false): array
     {
         $url = "retailer/products/{$ean}/offers";
         $options = [
@@ -962,6 +1031,7 @@ class Client extends BaseClient
                 'country-code' => $countryCode?->value,
                 'best-offer-only' => $bestOfferOnly,
                 'condition' => $condition?->value,
+                'include-refurbished-conditions' => $includeRefurbishedConditions,
             ],
             'produces' => 'application/vnd.retailer.v10+json',
         ];
@@ -2097,6 +2167,54 @@ class Client extends BaseClient
         $responseTypes = [
             '200' => Model\ProcessStatus::class,
             '404' => 'null',
+        ];
+
+        return $this->request('GET', $url, $options, $responseTypes);
+    }
+
+    /**
+     * Create a new offer
+     * @param Model\OffersCreateOfferRequest $offersCreateOfferRequest
+     * @return Model\OffersRetailerOffer
+     * @throws Exception\ConnectException when an error occurred in the HTTP connection.
+     * @throws Exception\ResponseException when an unexpected response was received.
+     * @throws Exception\UnauthorizedException when the request was unauthorized.
+     * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
+     * @throws Exception\Exception when something unexpected went wrong.
+     */
+    public function createOffer(Model\OffersCreateOfferRequest $offersCreateOfferRequest): Model\OffersRetailerOffer
+    {
+        $url = "retailer/offers";
+        $options = [
+            'body' => $offersCreateOfferRequest,
+            'produces' => 'application/vnd.retailer.v11+json',
+            'consumes' => 'application/vnd.retailer.v11+json',
+        ];
+        $responseTypes = [
+            '200' => Model\OffersRetailerOffer::class,
+        ];
+
+        return $this->request('POST', $url, $options, $responseTypes);
+    }
+
+    /**
+     * Get not for sale reasons for an offer by offer id
+     * @param string $offerId The unique identifier of the offer.
+     * @return Model\NotForSaleReasons
+     * @throws Exception\ConnectException when an error occurred in the HTTP connection.
+     * @throws Exception\ResponseException when an unexpected response was received.
+     * @throws Exception\UnauthorizedException when the request was unauthorized.
+     * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
+     * @throws Exception\Exception when something unexpected went wrong.
+     */
+    public function getNotForSaleReasons(string $offerId): Model\NotForSaleReasons
+    {
+        $url = "retailer/offers/{$offerId}/not-for-sale-reasons";
+        $options = [
+            'produces' => 'application/vnd.retailer.v11+json',
+        ];
+        $responseTypes = [
+            '200' => Model\NotForSaleReasons::class,
         ];
 
         return $this->request('GET', $url, $options, $responseTypes);
