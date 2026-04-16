@@ -40,7 +40,32 @@ class SwaggerSpecs
         $resultSpecs = $this->specs;
         $otherSpecs = $specs->getSpecs();
 
-        $resultSpecs['paths'] = array_merge($resultSpecs['paths'], $otherSpecs['paths']);
+        foreach ($otherSpecs['paths'] as $path => $methods) {
+            if (! isset($resultSpecs['paths'][$path])) {
+                $resultSpecs['paths'][$path] = $methods;
+                continue;
+            }
+
+            foreach ($methods as $httpMethod => $methodDef) {
+                if (! isset($resultSpecs['paths'][$path][$httpMethod])) {
+                    // New method on existing path — just add it
+                    $resultSpecs['paths'][$path][$httpMethod] = $methodDef;
+                } else {
+                    // Same path + same HTTP method already exists.
+                    $existingOperationId = $resultSpecs['paths'][$path][$httpMethod]['operationId'] ?? '';
+                    $newOperationId = $methodDef['operationId'] ?? '';
+
+                    if ($newOperationId !== '' && $newOperationId !== $existingOperationId) {
+                        // Different operationId: keep both as separate client methods
+                        // by aliasing the path with # so they point to the same URL.
+                        $aliasPath = $path . '#' . $newOperationId;
+                        $resultSpecs['paths'][$aliasPath][$httpMethod] = $methodDef;
+                    }
+                    // Same operationId: skip the duplicate, keep the existing one.
+                }
+            }
+        }
+
         $resultSpecs['components']['schemas'] = array_merge($resultSpecs['components']['schemas'], $otherSpecs['components']['schemas']);
 
         return new SwaggerSpecs($resultSpecs);
