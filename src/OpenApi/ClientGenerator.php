@@ -31,9 +31,10 @@ class ClientGenerator
 
     public function __construct()
     {
-        $retailer = (new SwaggerSpecs())->load(__DIR__ . '/retailer.json')
-            ->merge((new SwaggerSpecs())->load(__DIR__ . '/shared.json'));
-        $this->specs = $retailer->getSpecs();
+        $specs = (new SwaggerSpecs())->load(__DIR__ . '/retailer.json')
+            ->merge((new SwaggerSpecs())->load(__DIR__ . '/shared.json'))
+            ->merge((new SwaggerSpecs())->load(__DIR__ . '/offers.json'));
+        $this->specs = $specs->getSpecs();
     }
 
     public static function run()
@@ -252,6 +253,11 @@ class ClientGenerator
 
     protected function getUrl(string $path, array $arguments): string
     {
+        // Strip path alias used for deduplication (e.g. /retailer/offers#create-offer → /retailer/offers)
+        if (str_contains($path, '#')) {
+            $path = substr($path, 0, strpos($path, '#'));
+        }
+
         $url = substr($path, strlen('/'));
 
         foreach ($arguments as $argument) {
