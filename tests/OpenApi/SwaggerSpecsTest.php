@@ -51,65 +51,37 @@ class SwaggerSpecsTest extends TestCase
         $this->assertArrayHasKey('post', $merged['paths']['/offers']);
     }
 
-    public function testMergeKeepsBothOperationsWhenOperationIdsDiffer(): void
+    public function testMergeOverridesExistingMethodWithNewerSpec(): void
     {
         $base = new SwaggerSpecs([
             'paths' => [
-                '/offers' => ['post' => ['operationId' => 'post-offer']],
+                '/offers' => ['post' => ['operationId' => 'post-offer', 'source' => 'v10']],
             ],
             'components' => ['schemas' => []],
         ]);
 
         $other = new SwaggerSpecs([
             'paths' => [
-                '/offers' => ['post' => ['operationId' => 'create-offer']],
+                '/offers' => ['post' => ['operationId' => 'create-offer', 'source' => 'v11']],
             ],
             'components' => ['schemas' => []],
         ]);
 
         $merged = $base->merge($other)->getSpecs();
 
-        // v10 stays on original path
-        $this->assertEquals('post-offer', $merged['paths']['/offers']['post']['operationId']);
-
-        // v11 goes to aliased path
-        $this->assertArrayHasKey('/offers#create-offer', $merged['paths']);
-        $this->assertEquals('create-offer', $merged['paths']['/offers#create-offer']['post']['operationId']);
+        // v11 replaces v10 for same path + same HTTP method
+        $this->assertEquals('create-offer', $merged['paths']['/offers']['post']['operationId']);
+        $this->assertEquals('v11', $merged['paths']['/offers']['post']['source']);
     }
 
-    public function testMergeSkipsDuplicateWhenOperationIdsMatch(): void
-    {
-        $base = new SwaggerSpecs([
-            'paths' => [
-                '/offers/{id}' => ['get' => ['operationId' => 'get-offer', 'source' => 'v10']],
-            ],
-            'components' => ['schemas' => []],
-        ]);
-
-        $other = new SwaggerSpecs([
-            'paths' => [
-                '/offers/{id}' => ['get' => ['operationId' => 'get-offer', 'source' => 'v11']],
-            ],
-            'components' => ['schemas' => []],
-        ]);
-
-        $merged = $base->merge($other)->getSpecs();
-
-        // v10 version is kept
-        $this->assertEquals('v10', $merged['paths']['/offers/{id}']['get']['source']);
-
-        // No aliased path created
-        $this->assertArrayNotHasKey('/offers/{id}#get-offer', $merged['paths']);
-    }
-
-    public function testMergeCombinesNewAndConflictingMethodsOnSamePath(): void
+    public function testMergePreservesMethodsOnlyInBaseSpec(): void
     {
         $base = new SwaggerSpecs([
             'paths' => [
                 '/offers/{id}' => [
-                    'get' => ['operationId' => 'get-offer'],
-                    'put' => ['operationId' => 'put-offer'],
-                    'delete' => ['operationId' => 'delete-offer'],
+                    'get' => ['operationId' => 'get-offer', 'source' => 'v10'],
+                    'put' => ['operationId' => 'put-offer', 'source' => 'v10'],
+                    'delete' => ['operationId' => 'delete-offer', 'source' => 'v10'],
                 ],
             ],
             'components' => ['schemas' => []],
@@ -118,9 +90,9 @@ class SwaggerSpecsTest extends TestCase
         $other = new SwaggerSpecs([
             'paths' => [
                 '/offers/{id}' => [
-                    'get' => ['operationId' => 'get-offer'],     // same operationId → skip
-                    'delete' => ['operationId' => 'delete-offer'], // same operationId → skip
-                    'patch' => ['operationId' => 'update-offer'],  // new method → add
+                    'get' => ['operationId' => 'get-offer', 'source' => 'v11'],   // overrides
+                    'delete' => ['operationId' => 'delete-offer', 'source' => 'v11'], // overrides
+                    'patch' => ['operationId' => 'update-offer', 'source' => 'v11'],  // new
                 ],
             ],
             'components' => ['schemas' => []],
@@ -128,18 +100,17 @@ class SwaggerSpecsTest extends TestCase
 
         $merged = $base->merge($other)->getSpecs();
 
-        // v10 methods preserved
-        $this->assertArrayHasKey('get', $merged['paths']['/offers/{id}']);
+        // Overridden by v11
+        $this->assertEquals('v11', $merged['paths']['/offers/{id}']['get']['source']);
+        $this->assertEquals('v11', $merged['paths']['/offers/{id}']['delete']['source']);
+
+        // PUT only exists in v10 — must be preserved
         $this->assertArrayHasKey('put', $merged['paths']['/offers/{id}']);
-        $this->assertArrayHasKey('delete', $merged['paths']['/offers/{id}']);
+        $this->assertEquals('v10', $merged['paths']['/offers/{id}']['put']['source']);
 
-        // v11 new method added
+        // PATCH is new in v11
         $this->assertArrayHasKey('patch', $merged['paths']['/offers/{id}']);
-        $this->assertEquals('update-offer', $merged['paths']['/offers/{id}']['patch']['operationId']);
-
-        // No aliased paths (operationIds matched for get/delete)
-        $this->assertArrayNotHasKey('/offers/{id}#get-offer', $merged['paths']);
-        $this->assertArrayNotHasKey('/offers/{id}#delete-offer', $merged['paths']);
+        $this->assertEquals('v11', $merged['paths']['/offers/{id}']['patch']['source']);
     }
 
     public function testMergeCombinesSchemas(): void

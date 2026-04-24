@@ -479,27 +479,25 @@ class Client extends BaseClient
     }
 
     /**
-     * Creates a new offer, and adds it to the catalog. After creation, status information can be retrieved to review if
-     * the offer is valid and published to the shop.
-     * @param Model\CreateOfferRequest $createOfferRequest
-     * @param string|null $XFulfilmentParty
-     * @return Model\ProcessStatus
+     * Create a new offer
+     * @param Model\OffersCreateOfferRequest $offersCreateOfferRequest
+     * @return Model\OffersRetailerOffer
      * @throws Exception\ConnectException when an error occurred in the HTTP connection.
      * @throws Exception\ResponseException when an unexpected response was received.
      * @throws Exception\UnauthorizedException when the request was unauthorized.
      * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
      * @throws Exception\Exception when something unexpected went wrong.
      */
-    public function postOffer(Model\CreateOfferRequest $createOfferRequest, ?string $XFulfilmentParty = null): Model\ProcessStatus
+    public function createOffer(Model\OffersCreateOfferRequest $offersCreateOfferRequest): Model\OffersRetailerOffer
     {
         $url = "retailer/offers";
         $options = [
-            'body' => $createOfferRequest,
-            'produces' => 'application/vnd.retailer.v10+json',
-            'consumes' => 'application/vnd.retailer.v10+json',
+            'body' => $offersCreateOfferRequest,
+            'produces' => 'application/vnd.retailer.v11+json',
+            'consumes' => 'application/vnd.retailer.v11+json',
         ];
         $responseTypes = [
-            '202' => Model\ProcessStatus::class,
+            '200' => Model\OffersRetailerOffer::class,
         ];
 
         return $this->request('POST', $url, $options, $responseTypes);
@@ -643,24 +641,23 @@ class Client extends BaseClient
     }
 
     /**
-     * Retrieve an offer by using the offer id provided to you when creating or listing your offers.
-     * @param string $offerId Unique identifier for an offer.
-     * @return Model\RetailerOffer|null
+     * Get an offer by offer id
+     * @param string $offerId The unique identifier of the offer.
+     * @return Model\OfferResponse
      * @throws Exception\ConnectException when an error occurred in the HTTP connection.
      * @throws Exception\ResponseException when an unexpected response was received.
      * @throws Exception\UnauthorizedException when the request was unauthorized.
      * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
      * @throws Exception\Exception when something unexpected went wrong.
      */
-    public function getOffer(string $offerId): ?Model\RetailerOffer
+    public function getOffer(string $offerId): Model\OfferResponse
     {
         $url = "retailer/offers/{$offerId}";
         $options = [
-            'produces' => 'application/vnd.retailer.v10+json',
+            'produces' => 'application/vnd.retailer.v11+json',
         ];
         $responseTypes = [
-            '200' => Model\RetailerOffer::class,
-            '404' => 'null',
+            '200' => Model\OfferResponse::class,
         ];
 
         return $this->request('GET', $url, $options, $responseTypes);
@@ -693,8 +690,8 @@ class Client extends BaseClient
     }
 
     /**
-     * Delete an offer by id.
-     * @param string $offerId Unique identifier for an offer.
+     * Delete offer by id
+     * @param string $offerId The unique identifier of the offer to be deleted.
      * @return Model\ProcessStatus
      * @throws Exception\ConnectException when an error occurred in the HTTP connection.
      * @throws Exception\ResponseException when an unexpected response was received.
@@ -706,7 +703,7 @@ class Client extends BaseClient
     {
         $url = "retailer/offers/{$offerId}";
         $options = [
-            'produces' => 'application/vnd.retailer.v10+json',
+            'produces' => 'application/vnd.retailer.v11+json',
         ];
         $responseTypes = [
             '202' => Model\ProcessStatus::class,
@@ -2170,31 +2167,6 @@ class Client extends BaseClient
         ];
 
         return $this->request('GET', $url, $options, $responseTypes);
-    }
-
-    /**
-     * Create a new offer
-     * @param Model\OffersCreateOfferRequest $offersCreateOfferRequest
-     * @return Model\OffersRetailerOffer
-     * @throws Exception\ConnectException when an error occurred in the HTTP connection.
-     * @throws Exception\ResponseException when an unexpected response was received.
-     * @throws Exception\UnauthorizedException when the request was unauthorized.
-     * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
-     * @throws Exception\Exception when something unexpected went wrong.
-     */
-    public function createOffer(Model\OffersCreateOfferRequest $offersCreateOfferRequest): Model\OffersRetailerOffer
-    {
-        $url = "retailer/offers";
-        $options = [
-            'body' => $offersCreateOfferRequest,
-            'produces' => 'application/vnd.retailer.v11+json',
-            'consumes' => 'application/vnd.retailer.v11+json',
-        ];
-        $responseTypes = [
-            '200' => Model\OffersRetailerOffer::class,
-        ];
-
-        return $this->request('POST', $url, $options, $responseTypes);
     }
 
     /**
