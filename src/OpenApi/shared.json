@@ -276,12 +276,14 @@
                     "host": {
                         "type": "string",
                         "description": "Host identifier describing the server instance that reported the problem.",
+                        "nullable": true,
                         "example": "Instance-001"
                     },
                     "instance": {
                         "type": "string",
                         "description": "Full URI path of the resource that reported the problem.",
                         "format": "uri",
+                        "nullable": true,
                         "example": "https://api.bol.com//retailer/resource"
                     },
                     "violations": {
@@ -352,25 +354,32 @@
                         "type": "string"
                     },
                     "hreflang": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "media": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "title": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "type": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "deprecation": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "profile": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "name": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     }
                 }
             },
@@ -387,11 +396,13 @@
                     "processStatusId": {
                         "type": "string",
                         "description": "The process status id.",
+                        "nullable": true,
                         "example": "1234567"
                     },
                     "entityId": {
                         "type": "string",
                         "description": "The id of the object being processed. For example, in case of a shipment process id, you will receive the id of the order item being processed.",
+                        "nullable": true,
                         "example": "987654321"
                     },
                     "eventType": {
@@ -418,6 +429,7 @@
                     "errorMessage": {
                         "type": "string",
                         "description": "Shows error message if applicable.",
+                        "nullable": true,
                         "example": "Example process status error message."
                     },
                     "createTimestamp": {
