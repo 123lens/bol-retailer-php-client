@@ -137,6 +137,7 @@ class ClientGenerator
         $responseContent = $methodDefinition['responses']['200']['content']
             ?? $methodDefinition['responses']['201']['content']
             ?? $methodDefinition['responses']['202']['content']
+            ?? $methodDefinition['responses']['204']['content']
             ?? $methodDefinition['responses']['207']['content']
             ?? $methodDefinition['responses']['400']['content']
             ?? null;

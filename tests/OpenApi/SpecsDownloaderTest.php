@@ -115,7 +115,7 @@ class SpecsDownloaderTest extends TestCase
         $this->assertEquals('#/components/schemas/Foo', $schema['$ref']);
     }
 
-    public function testResponseCode204IsPreserved(): void
+    public function testResponseCode204IsPreservedWithMediaTypeStub(): void
     {
         $spec = $this->buildSpec([
             '/test' => [
@@ -137,6 +137,9 @@ class SpecsDownloaderTest extends TestCase
         $this->assertArrayHasKey('204', $responses);
         $this->assertArrayNotHasKey('202', $responses);
         $this->assertEquals('Deleted', $responses['204']['description']);
+
+        // A v11 media-type stub is injected so the generator emits the Accept header.
+        $this->assertArrayHasKey('application/vnd.retailer.v11+json', $responses['204']['content']);
     }
 
     // --- Schema normalization ---

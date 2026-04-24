@@ -276,6 +276,15 @@ class SpecsDownloader
                         continue;
                     }
 
+                    // 204 has no body, but the generator uses the response content type
+                    // to derive the Accept header. Inject a v11 stub so the Accept
+                    // header is set correctly on 204-only endpoints.
+                    if ($code === '204' && ! isset($response['content'])) {
+                        $response['content'] = [
+                            'application/vnd.retailer.v11+json' => [],
+                        ];
+                    }
+
                     $newResponses[$code] = $response;
                 }
 

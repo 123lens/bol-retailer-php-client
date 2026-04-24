@@ -761,6 +761,7 @@ class Client extends BaseClient
     {
         $url = "retailer/offers/{$offerId}";
         $options = [
+            'produces' => 'application/vnd.retailer.v11+json',
         ];
         $responseTypes = [
             '204' => 'null',
@@ -785,6 +786,7 @@ class Client extends BaseClient
         $url = "retailer/offers/{$offerId}";
         $options = [
             'body' => $patchOfferRequest,
+            'produces' => 'application/vnd.retailer.v11+json',
             'consumes' => 'application/vnd.retailer.v11+json',
         ];
         $responseTypes = [
