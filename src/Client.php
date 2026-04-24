@@ -897,7 +897,7 @@ class Client extends BaseClient
      * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
      * @throws Exception\Exception when something unexpected went wrong.
      */
-    public function getProductCategories(?string $AcceptLanguage = null): array
+    public function getProductCategories(?string $AcceptLanguage = 'nl'): array
     {
         $url = "retailer/products/categories";
         $options = [

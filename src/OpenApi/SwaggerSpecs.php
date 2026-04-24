@@ -17,8 +17,30 @@ class SwaggerSpecs
         $content = $this->replaceErroneousCharacters($content);
 
         $this->specs = json_decode($content, true);
+        $this->flattenSingleRefAllOf($this->specs);
 
         return $this;
+    }
+
+    /**
+     * Flatten `allOf: [{ $ref: ... }]` wrappers (used to add nullable to a $ref) into
+     * a direct $ref, so the generators can treat them uniformly.
+     */
+    private function flattenSingleRefAllOf(array &$data): void
+    {
+        foreach ($data as $key => &$value) {
+            if (! is_array($value)) {
+                continue;
+            }
+
+            if (isset($value['allOf']) && is_array($value['allOf'])
+                && count($value['allOf']) === 1 && isset($value['allOf'][0]['$ref'])) {
+                $value = ['$ref' => $value['allOf'][0]['$ref']];
+                continue;
+            }
+
+            $this->flattenSingleRefAllOf($value);
+        }
     }
 
     private function replaceErroneousCharacters(string $content): string

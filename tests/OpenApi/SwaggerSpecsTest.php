@@ -113,6 +113,35 @@ class SwaggerSpecsTest extends TestCase
         $this->assertEquals('v11', $merged['paths']['/offers/{id}']['patch']['source']);
     }
 
+    public function testLoadFlattensSingleRefAllOf(): void
+    {
+        $spec = [
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'Wrapper' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'inner' => [
+                                'nullable' => true,
+                                'allOf' => [['$ref' => '#/components/schemas/Other']],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $tmp = tempnam(sys_get_temp_dir(), 'spec') . '.json';
+        file_put_contents($tmp, json_encode($spec));
+
+        $loaded = (new SwaggerSpecs())->load($tmp)->getSpecs();
+        unlink($tmp);
+
+        $innerProp = $loaded['components']['schemas']['Wrapper']['properties']['inner'];
+        $this->assertEquals(['$ref' => '#/components/schemas/Other'], $innerProp);
+    }
+
     public function testMergeCombinesSchemas(): void
     {
         $base = new SwaggerSpecs([
