@@ -111,7 +111,11 @@ class OfferResponse extends AbstractModel
             return null;
         }
 
-        return \DateTime::createFromFormat(\DateTime::ATOM, $this->lastModifiedDateTime);
+        try {
+            return new \DateTime($this->lastModifiedDateTime);
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     /**
