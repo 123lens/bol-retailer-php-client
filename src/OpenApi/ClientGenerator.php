@@ -103,7 +103,7 @@ class ClientGenerator
         $arguments = $this->extractArguments($methodDefinition);
 
         $nullableReturnType = false;
-        if (isset($methodDefinition['responses']['404'])) {
+        if (isset($methodDefinition['responses']['404']) && $returnType['php'] !== 'void') {
             $nullableReturnType = true;
             if (! isset($returnType['property'])) {
                 $returnType['doc'] = $returnType['doc'] . '|null';
@@ -134,8 +134,15 @@ class ClientGenerator
         $this->addBodyParam($arguments, $code);
         $this->addFormData($arguments, $code);
 
-        $responseContent = $methodDefinition['responses']['200']['content'] ?? $methodDefinition['responses']['202']['content'] ?? $methodDefinition['responses']['207']['content'] ?? $methodDefinition['responses']['400']['content'] ?? null;
-        $code[] = sprintf('            \'produces\' => \'%s\',', array_key_first($responseContent));
+        $responseContent = $methodDefinition['responses']['200']['content']
+            ?? $methodDefinition['responses']['201']['content']
+            ?? $methodDefinition['responses']['202']['content']
+            ?? $methodDefinition['responses']['207']['content']
+            ?? $methodDefinition['responses']['400']['content']
+            ?? null;
+        if ($responseContent !== null) {
+            $code[] = sprintf('            \'produces\' => \'%s\',', array_key_first($responseContent));
+        }
 
         if ($methodDefinition['requestBody']['content'] ?? false) {
             $code[] = sprintf('            \'consumes\' => \'%s\',', array_key_first($methodDefinition['requestBody']['content']));
@@ -169,6 +176,12 @@ class ClientGenerator
                 strtoupper($httpMethod),
                 $options,
                 $returnType['property']
+            );
+        } elseif ($returnType['php'] === 'void') {
+            $code[] = sprintf(
+                '        $this->request(\'%s\', $url, %s, $responseTypes);',
+                strtoupper($httpMethod),
+                $options
             );
         } else {
             $code[] = sprintf(
@@ -513,7 +526,7 @@ class ClientGenerator
         $code[] = '        $responseTypes = [';
         foreach ($responses as $httpStatus => $response) {
             $type = null;
-            if (in_array($httpStatus, ['200', '202', '207'])) {
+            if (in_array($httpStatus, ['200', '201', '202', '207'])) {
                 $response = current($response['content'] ?? []);
 
                 if (! isset($response['schema'])) {
@@ -524,7 +537,7 @@ class ClientGenerator
                 } else {
                     $type = '\'string\'';
                 }
-            } elseif ($httpStatus == '404') {
+            } elseif (in_array($httpStatus, ['204', '404'])) {
                 $type = '\'null\'';
             }
             if ($type !== null) {
@@ -536,7 +549,13 @@ class ClientGenerator
 
     protected function getReturnType(array $responses): array
     {
-        $response = $responses['200'] ?? $responses['202'] ?? $responses['207'] ?? null;
+        $response = $responses['200'] ?? $responses['201'] ?? $responses['202'] ?? $responses['207'] ?? null;
+
+        // Operations whose only success response is 204 No Content return void.
+        if ($response === null && isset($responses['204'])) {
+            return ['doc' => 'void', 'php' => 'void'];
+        }
+
         if ($response === null) {
             throw new Exception('Could not fit responseType: ' . print_r($responses, true));
         }
