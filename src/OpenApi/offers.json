@@ -152,7 +152,7 @@
                     "required": true
                 },
                 "responses": {
-                    "200": {
+                    "201": {
                         "description": "Offer is created",
                         "content": {
                             "application/vnd.retailer.v11+json": {
@@ -227,14 +227,10 @@
                     }
                 ],
                 "responses": {
-                    "202": {
+                    "204": {
                         "description": "Offer was deleted successfully.",
                         "content": {
-                            "application/vnd.retailer.v11+json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ProcessStatus"
-                                }
-                            }
+                            "application/vnd.retailer.v11+json": []
                         }
                     }
                 },
@@ -273,14 +269,10 @@
                     }
                 },
                 "responses": {
-                    "202": {
+                    "204": {
                         "description": "Offer was updated successfully.",
                         "content": {
-                            "application/vnd.retailer.v11+json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ProcessStatus"
-                                }
-                            }
+                            "application/vnd.retailer.v11+json": []
                         }
                     }
                 },

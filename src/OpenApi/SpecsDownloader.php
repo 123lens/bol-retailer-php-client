@@ -266,39 +266,13 @@ class SpecsDownloader
                     continue;
                 }
 
-                // Normalize responses
+                // Normalize responses: cast codes to strings and drop external $refs.
                 $newResponses = [];
                 foreach ($methodDef['responses'] as $code => $response) {
                     $code = (string) $code;
 
                     // Remove external $ref responses (e.g. ../common/responses.yaml#/...)
                     if (isset($response['$ref']) && ! str_starts_with($response['$ref'], '#/')) {
-                        continue;
-                    }
-
-                    // Map 201 (Created) to 200 for generator compatibility
-                    if ($code === '201') {
-                        $newResponses['200'] = $response;
-                        continue;
-                    }
-
-                    // Map 204 (No Content) to 202 with ProcessStatus for generator compatibility
-                    if ($code === '204') {
-                        $contentType = 'application/vnd.retailer.v11+json';
-                        if (isset($response['content'])) {
-                            $contentType = array_key_first($response['content']) ?: $contentType;
-                        }
-
-                        $newResponses['202'] = [
-                            'description' => $response['description'] ?? '',
-                            'content' => [
-                                $contentType => [
-                                    'schema' => [
-                                        '$ref' => '#/components/schemas/ProcessStatus',
-                                    ],
-                                ],
-                            ],
-                        ];
                         continue;
                     }
 

@@ -86,7 +86,7 @@ class SpecsDownloaderTest extends TestCase
         $this->assertArrayNotHasKey('500', $responses);
     }
 
-    public function testResponseCode201IsMappedTo200(): void
+    public function testResponseCode201IsPreserved(): void
     {
         $spec = $this->buildSpec([
             '/test' => [
@@ -108,12 +108,14 @@ class SpecsDownloaderTest extends TestCase
         $result = $this->normalize($spec);
         $responses = $result['paths']['/test']['post']['responses'];
 
-        $this->assertArrayHasKey('200', $responses);
-        $this->assertArrayNotHasKey('201', $responses);
-        $this->assertArrayNotHasKey(201, $responses);
+        $this->assertArrayHasKey('201', $responses);
+        $this->assertArrayNotHasKey('200', $responses);
+
+        $schema = $responses['201']['content']['application/json']['schema'];
+        $this->assertEquals('#/components/schemas/Foo', $schema['$ref']);
     }
 
-    public function testResponseCode204IsMappedTo202WithProcessStatus(): void
+    public function testResponseCode204IsPreserved(): void
     {
         $spec = $this->buildSpec([
             '/test' => [
@@ -123,7 +125,6 @@ class SpecsDownloaderTest extends TestCase
                     'responses' => [
                         204 => [
                             'description' => 'Deleted',
-                            'content' => ['application/vnd.retailer.v11+json' => []],
                         ],
                     ],
                 ],
@@ -133,12 +134,9 @@ class SpecsDownloaderTest extends TestCase
         $result = $this->normalize($spec);
         $responses = $result['paths']['/test']['delete']['responses'];
 
-        $this->assertArrayHasKey('202', $responses);
-        $this->assertArrayNotHasKey('204', $responses);
-        $this->assertArrayNotHasKey(204, $responses);
-
-        $schema = $responses['202']['content']['application/vnd.retailer.v11+json']['schema'];
-        $this->assertEquals('#/components/schemas/ProcessStatus', $schema['$ref']);
+        $this->assertArrayHasKey('204', $responses);
+        $this->assertArrayNotHasKey('202', $responses);
+        $this->assertEquals('Deleted', $responses['204']['description']);
     }
 
     // --- Schema normalization ---

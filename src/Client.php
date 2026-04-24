@@ -555,7 +555,7 @@ class Client extends BaseClient
             'consumes' => 'application/vnd.retailer.v11+json',
         ];
         $responseTypes = [
-            '200' => Model\OffersRetailerOffer::class,
+            '201' => Model\OffersRetailerOffer::class,
         ];
 
         return $this->request('POST', $url, $options, $responseTypes);
@@ -750,50 +750,48 @@ class Client extends BaseClient
     /**
      * Delete offer by id
      * @param string $offerId The unique identifier of the offer to be deleted.
-     * @return Model\ProcessStatus
+     * @return void
      * @throws Exception\ConnectException when an error occurred in the HTTP connection.
      * @throws Exception\ResponseException when an unexpected response was received.
      * @throws Exception\UnauthorizedException when the request was unauthorized.
      * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
      * @throws Exception\Exception when something unexpected went wrong.
      */
-    public function deleteOffer(string $offerId): Model\ProcessStatus
+    public function deleteOffer(string $offerId): void
     {
         $url = "retailer/offers/{$offerId}";
         $options = [
-            'produces' => 'application/vnd.retailer.v11+json',
         ];
         $responseTypes = [
-            '202' => Model\ProcessStatus::class,
+            '204' => 'null',
         ];
 
-        return $this->request('DELETE', $url, $options, $responseTypes);
+        $this->request('DELETE', $url, $options, $responseTypes);
     }
 
     /**
      * Update an offer
      * @param string $offerId The unique identifier of the offer to be updated.
      * @param Model\PatchOfferRequest $patchOfferRequest
-     * @return Model\ProcessStatus
+     * @return void
      * @throws Exception\ConnectException when an error occurred in the HTTP connection.
      * @throws Exception\ResponseException when an unexpected response was received.
      * @throws Exception\UnauthorizedException when the request was unauthorized.
      * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
      * @throws Exception\Exception when something unexpected went wrong.
      */
-    public function updateOffer(string $offerId, Model\PatchOfferRequest $patchOfferRequest): Model\ProcessStatus
+    public function updateOffer(string $offerId, Model\PatchOfferRequest $patchOfferRequest): void
     {
         $url = "retailer/offers/{$offerId}";
         $options = [
             'body' => $patchOfferRequest,
-            'produces' => 'application/vnd.retailer.v11+json',
             'consumes' => 'application/vnd.retailer.v11+json',
         ];
         $responseTypes = [
-            '202' => Model\ProcessStatus::class,
+            '204' => 'null',
         ];
 
-        return $this->request('PATCH', $url, $options, $responseTypes);
+        $this->request('PATCH', $url, $options, $responseTypes);
     }
 
     /**
@@ -1910,21 +1908,21 @@ class Client extends BaseClient
      * response. If you are only interested in the metadata, you can do a HEAD request to retrieve only the headers
      * without the label data.
      * @param string $shippingLabelId The shipping label id.
-     * @return array|null
+     * @return string|null
      * @throws Exception\ConnectException when an error occurred in the HTTP connection.
      * @throws Exception\ResponseException when an unexpected response was received.
      * @throws Exception\UnauthorizedException when the request was unauthorized.
      * @throws Exception\RateLimitException when the throttling limit has been reached for the API user.
      * @throws Exception\Exception when something unexpected went wrong.
      */
-    public function getShippingLabel(string $shippingLabelId): ?array
+    public function getShippingLabel(string $shippingLabelId): ?string
     {
         $url = "retailer/shipping-labels/{$shippingLabelId}";
         $options = [
             'produces' => 'application/vnd.retailer.v10+pdf',
         ];
         $responseTypes = [
-            '200' => 'array',
+            '200' => 'string',
             '404' => 'null',
         ];
 
@@ -2019,7 +2017,6 @@ class Client extends BaseClient
         $url = "retailer/subscriptions/test/{$subscriptionId}";
         $options = [
             'produces' => 'application/vnd.retailer.v10+json',
-            'consumes' => 'application/vnd.retailer.v10+json',
         ];
         $responseTypes = [
             '202' => Model\ProcessStatus::class,
@@ -2098,7 +2095,6 @@ class Client extends BaseClient
         $url = "retailer/subscriptions/{$subscriptionId}";
         $options = [
             'produces' => 'application/vnd.retailer.v10+json',
-            'consumes' => 'application/vnd.retailer.v10+json',
         ];
         $responseTypes = [
             '202' => Model\ProcessStatus::class,
