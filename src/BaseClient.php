@@ -578,9 +578,10 @@ class BaseClient
 
                 match ($statusCode) {
                     401 => throw new UnauthorizedException($message, $statusCode),
-                    404 => !empty($data['detail']) ?
-                        throw new ResponseException($message, $statusCode)
-                        : null,
+                    // 404 falls through to decodeResponse — methods with `'404' => 'null'`
+                    // in their $responseTypes map it to null; methods without it will hit
+                    // the "No model specified" branch in decodeResponse.
+                    404 => null,
                     429 => throw new RateLimitException(
                         $message,
                         $statusCode,
@@ -590,10 +591,7 @@ class BaseClient
                             : null
                     ),
                     500, 502, 503, 504, 507 => throw new ServerException($message, $statusCode),
-
-                    default => $statusCode != 404
-                        ? throw new ResponseException($message, $statusCode)
-                        : null,
+                    default => throw new ResponseException($message, $statusCode),
                 };
             }
         } catch (GuzzleException $guzzleException) {
