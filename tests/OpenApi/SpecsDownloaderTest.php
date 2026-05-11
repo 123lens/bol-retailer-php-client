@@ -345,4 +345,190 @@ class SpecsDownloaderTest extends TestCase
 
         $this->assertEquals('object', $result['components']['schemas']['NoType']['type']);
     }
+
+    // --- Economic Operator renames ---
+
+    public function testEconomicOperatorAddressIsRenamed(): void
+    {
+        $spec = $this->buildSpec([], [
+            'address' => [
+                'type' => 'object',
+                'properties' => ['street' => ['type' => 'string']],
+            ],
+        ]);
+
+        $result = $this->normalize($spec);
+        $schemas = $result['components']['schemas'];
+
+        $this->assertArrayNotHasKey('address', $schemas);
+        $this->assertArrayHasKey('EconomicOperatorAddress', $schemas);
+    }
+
+    public function testEconomicOperatorPageIsRenamed(): void
+    {
+        $spec = $this->buildSpec([], [
+            'page' => [
+                'type' => 'object',
+                'properties' => ['pageNumber' => ['type' => 'integer']],
+            ],
+        ]);
+
+        $result = $this->normalize($spec);
+        $schemas = $result['components']['schemas'];
+
+        $this->assertArrayNotHasKey('page', $schemas);
+        $this->assertArrayHasKey('EconomicOperatorPage', $schemas);
+    }
+
+    public function testRefsToRenamedEconomicOperatorAddressAreUpdated(): void
+    {
+        $spec = $this->buildSpec([], [
+            'address' => [
+                'type' => 'object',
+                'properties' => ['street' => ['type' => 'string']],
+            ],
+            'EconomicOperator' => [
+                'type' => 'object',
+                'properties' => ['address' => ['$ref' => '#/components/schemas/address']],
+            ],
+        ]);
+
+        $result = $this->normalize($spec);
+
+        $this->assertEquals(
+            '#/components/schemas/EconomicOperatorAddress',
+            $result['components']['schemas']['EconomicOperator']['properties']['address']['$ref']
+        );
+    }
+
+    // --- Component response inlining ---
+
+    public function testComponentResponseRefIsInlined(): void
+    {
+        $spec = [
+            'openapi' => '3.0.1',
+            'paths' => [
+                '/test' => [
+                    'post' => [
+                        'operationId' => 'create-test',
+                        'summary' => 'Create',
+                        'responses' => [
+                            '200' => ['$ref' => '#/components/responses/200_CRUD_SUCCESSFUL'],
+                        ],
+                    ],
+                ],
+            ],
+            'components' => [
+                'schemas' => [
+                    'Foo' => ['type' => 'object', 'properties' => ['id' => ['type' => 'string']]],
+                ],
+                'responses' => [
+                    '200_CRUD_SUCCESSFUL' => [
+                        'description' => 'Created',
+                        'content' => [
+                            'application/json' => [
+                                'schema' => ['$ref' => '#/components/schemas/Foo'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $result = $this->normalize($spec);
+        $response = $result['paths']['/test']['post']['responses']['200'];
+
+        $this->assertArrayNotHasKey('$ref', $response);
+        $this->assertEquals('Created', $response['description']);
+        $this->assertEquals(
+            '#/components/schemas/Foo',
+            $response['content']['application/json']['schema']['$ref']
+        );
+    }
+
+    public function testUnknownComponentResponseRefIsLeftAlone(): void
+    {
+        $spec = [
+            'openapi' => '3.0.1',
+            'paths' => [
+                '/test' => [
+                    'get' => [
+                        'operationId' => 'get-test',
+                        'summary' => 'Get',
+                        'responses' => [
+                            '200' => ['$ref' => '#/components/responses/UNKNOWN'],
+                        ],
+                    ],
+                ],
+            ],
+            'components' => [
+                'schemas' => [],
+                'responses' => [
+                    'OTHER' => ['description' => 'Other'],
+                ],
+            ],
+        ];
+
+        $result = $this->normalize($spec);
+        $response = $result['paths']['/test']['get']['responses']['200'];
+
+        // No matching component response means the ref survives normalization unchanged.
+        $this->assertEquals('#/components/responses/UNKNOWN', $response['$ref']);
+    }
+
+    // --- External ref resolution ---
+
+    public function testExternalSchemaRefIsRewrittenToLocal(): void
+    {
+        $class = new ReflectionClass(\Picqer\BolRetailerV10\OpenApi\SpecsDownloader::class);
+        $method = $class->getMethod('rewriteExternalRefs');
+        $method->setAccessible(true);
+
+        $data = [
+            'parameters' => [
+                ['schema' => ['$ref' => '../common/models.yaml#/components/schemas/pageSize']],
+                ['schema' => ['$ref' => '#/components/schemas/Local']],
+                ['schema' => ['$ref' => '../common/responses.yaml#/components/responses/400_BAD_REQUEST']],
+            ],
+        ];
+
+        $method->invokeArgs(null, [&$data]);
+
+        // common/models.yaml refs get rewritten to local
+        $this->assertEquals('#/components/schemas/pageSize', $data['parameters'][0]['schema']['$ref']);
+
+        // Already-local refs stay untouched
+        $this->assertEquals('#/components/schemas/Local', $data['parameters'][1]['schema']['$ref']);
+
+        // responses.yaml is not in EXTERNAL_REF_SOURCES — stays as-is (normalizePaths drops it later)
+        $this->assertEquals(
+            '../common/responses.yaml#/components/responses/400_BAD_REQUEST',
+            $data['parameters'][2]['schema']['$ref']
+        );
+    }
+
+    public function testExpandTransitivelyFollowsInternalRefs(): void
+    {
+        $class = new ReflectionClass(\Picqer\BolRetailerV10\OpenApi\SpecsDownloader::class);
+        $method = $class->getMethod('expandTransitively');
+        $method->setAccessible(true);
+
+        $sourceSchemas = [
+            'page' => [
+                'type' => 'object',
+                'properties' => [
+                    'pageSize' => ['$ref' => '#/components/schemas/pageSize'],
+                    'pageNumber' => ['$ref' => '#/components/schemas/pageNumber'],
+                ],
+            ],
+            'pageSize' => ['type' => 'integer'],
+            'pageNumber' => ['type' => 'integer'],
+            'unused' => ['type' => 'string'],
+        ];
+
+        $result = $method->invoke(null, ['page' => true], $sourceSchemas);
+
+        sort($result);
+        $this->assertEquals(['page', 'pageNumber', 'pageSize'], $result);
+    }
 }

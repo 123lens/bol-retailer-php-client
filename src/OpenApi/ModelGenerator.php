@@ -26,7 +26,8 @@ class ModelGenerator
     {
         $specs = (new SwaggerSpecs())->load(__DIR__ . '/retailer.json')
             ->merge((new SwaggerSpecs())->load(__DIR__ . '/shared.json'))
-            ->merge((new SwaggerSpecs())->load(__DIR__ . '/offers.json'));
+            ->merge((new SwaggerSpecs())->load(__DIR__ . '/offers.json'))
+            ->merge((new SwaggerSpecs())->load(__DIR__ . '/economic-operators.json'));
 
         $this->specs = $specs->getSpecs();
     }

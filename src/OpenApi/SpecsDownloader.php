@@ -20,18 +20,36 @@ class SpecsDownloader
             'target' => 'offers.json',
             'normalize' => true,
         ],
+        [
+            'source' => 'https://api.bol.com/registry/api-definitions/economic-operators/economic-operators-v1.yaml',
+            'target' => 'economic-operators.json',
+            'normalize' => true,
+        ]
     ];
 
-    // Schemas that exist in both retailer.json (v10) and offers.yaml (v11) with different structures.
-    // These get an "Offers" prefix so both versions coexist after merge.
+    // Schemas that exist in both retailer.json (v10) and a newer YAML spec with different structures.
+    // These get renamed so both versions coexist after merge.
     // Stock is excluded because it has an identical structure in both versions.
     private const OVERLAPPING_SCHEMAS = [
+        // offers.yaml (v11) vs retailer.json (v10)
         'Condition' => 'OffersCondition',
         'CreateOfferRequest' => 'OffersCreateOfferRequest',
         'Fulfilment' => 'OffersFulfilment',
         'Pricing' => 'OffersPricing',
         'Product' => 'OffersProduct',
         'RetailerOffer' => 'OffersRetailerOffer',
+        // economic-operators.yaml — collides with retailer.json Address and the
+        // common pagination Page (offers.json has a cursor-based Page).
+        'address' => 'EconomicOperatorAddress',
+        'page' => 'EconomicOperatorPage',
+    ];
+
+    // External $ref documents that should be resolved inline during normalization.
+    // Schemas they expose get pulled into components.schemas; refs get rewritten
+    // to local. Other external documents (e.g. responses.yaml) stay unhandled
+    // and their refs are dropped by normalizePaths.
+    private const EXTERNAL_REF_SOURCES = [
+        '../common/models.yaml' => 'https://api.bol.com/registry/api-definitions/common/models.yaml',
     ];
 
 
@@ -63,6 +81,14 @@ class SpecsDownloader
 
     private static function normalizeOffersSpec(array $spec): array
     {
+        // Step 0a: Resolve external $ref documents (e.g. common/models.yaml) by
+        // pulling referenced schemas in and rewriting refs to local.
+        self::resolveExternalRefs($spec);
+
+        // Step 0b: Inline component-level response refs into each operation,
+        // so the generator doesn't have to chase #/components/responses indirection.
+        self::inlineComponentResponses($spec);
+
         $schemas = &$spec['components']['schemas'];
 
         // Step 1: Collect primitive/enum schemas (no properties, no oneOf) for inlining
@@ -244,6 +270,212 @@ class SpecsDownloader
             // Recurse into child arrays/objects
             self::resolveAllRefs($value, $renameMap, $primitiveSchemas);
         }
+    }
+
+    /**
+     * Resolve external $ref documents listed in EXTERNAL_REF_SOURCES.
+     * For each referenced schema name, pull the schema into components.schemas
+     * (transitively, following internal refs in the source document) and
+     * rewrite the external ref to a local one.
+     */
+    private static function resolveExternalRefs(array &$spec): void
+    {
+        $externalRefs = [];
+        self::collectExternalRefs($spec, $externalRefs);
+
+        if ($externalRefs === []) {
+            return;
+        }
+
+        $loadedSources = [];
+
+        foreach (self::EXTERNAL_REF_SOURCES as $documentPath => $url) {
+            if (! isset($externalRefs[$documentPath])) {
+                continue;
+            }
+
+            $sourceSchemas = self::loadExternalSchemas($url, $loadedSources, $documentPath);
+            $needed = self::expandTransitively($externalRefs[$documentPath], $sourceSchemas);
+
+            foreach ($needed as $schemaName) {
+                if (! isset($sourceSchemas[$schemaName])) {
+                    throw new \RuntimeException(sprintf(
+                        'External schema "%s" not found in %s',
+                        $schemaName,
+                        $url
+                    ));
+                }
+
+                // Don't overwrite a schema already defined by the primary spec.
+                if (! isset($spec['components']['schemas'][$schemaName])) {
+                    $spec['components']['schemas'][$schemaName] = $sourceSchemas[$schemaName];
+                }
+            }
+        }
+
+        // Rewrite external refs to local refs.
+        self::rewriteExternalRefs($spec);
+    }
+
+    /**
+     * Recursively walk $data and collect external $refs grouped by source document.
+     * Result shape: [documentPath => [schemaName => true]]
+     */
+    private static function collectExternalRefs(array $data, array &$out): void
+    {
+        foreach ($data as $value) {
+            if (! is_array($value)) {
+                continue;
+            }
+
+            if (isset($value['$ref']) && is_string($value['$ref'])) {
+                foreach (self::EXTERNAL_REF_SOURCES as $documentPath => $_url) {
+                    $prefix = $documentPath . '#/components/schemas/';
+                    if (str_starts_with($value['$ref'], $prefix)) {
+                        $schemaName = substr($value['$ref'], strlen($prefix));
+                        $out[$documentPath][$schemaName] = true;
+                        break;
+                    }
+                }
+            }
+
+            self::collectExternalRefs($value, $out);
+        }
+    }
+
+    private static function loadExternalSchemas(string $url, array &$cache, string $documentPath): array
+    {
+        if (isset($cache[$documentPath])) {
+            return $cache[$documentPath];
+        }
+
+        $content = file_get_contents($url);
+        if ($content === false) {
+            throw new \RuntimeException("Failed to fetch external ref document: {$url}");
+        }
+
+        $parsed = self::isYamlSource($url)
+            ? Yaml::parse($content)
+            : json_decode($content, true);
+
+        $cache[$documentPath] = $parsed['components']['schemas'] ?? [];
+        return $cache[$documentPath];
+    }
+
+    /**
+     * Expand the set of needed schemas by following internal #/components/schemas
+     * references inside $sourceSchemas. $seed is a [name => true] map.
+     * Returns a flat list of unique schema names.
+     */
+    private static function expandTransitively(array $seed, array $sourceSchemas): array
+    {
+        $visited = [];
+        $queue = array_keys($seed);
+
+        while ($queue !== []) {
+            $name = array_shift($queue);
+            if (isset($visited[$name])) {
+                continue;
+            }
+            $visited[$name] = true;
+
+            if (! isset($sourceSchemas[$name])) {
+                continue;
+            }
+
+            $refs = [];
+            self::collectInternalRefs($sourceSchemas[$name], $refs);
+            foreach ($refs as $refName => $_) {
+                if (! isset($visited[$refName])) {
+                    $queue[] = $refName;
+                }
+            }
+        }
+
+        return array_keys($visited);
+    }
+
+    /**
+     * Collect internal #/components/schemas/X refs in $data into $out as [name => true].
+     */
+    private static function collectInternalRefs(array $data, array &$out): void
+    {
+        foreach ($data as $value) {
+            if (! is_array($value)) {
+                continue;
+            }
+            if (isset($value['$ref']) && is_string($value['$ref'])
+                && str_starts_with($value['$ref'], '#/components/schemas/')) {
+                $name = substr($value['$ref'], strlen('#/components/schemas/'));
+                $out[$name] = true;
+            }
+            self::collectInternalRefs($value, $out);
+        }
+    }
+
+    /**
+     * Recursively rewrite any external schema ref listed in EXTERNAL_REF_SOURCES
+     * into a local ref.
+     */
+    private static function rewriteExternalRefs(array &$data): void
+    {
+        foreach ($data as $key => &$value) {
+            if (! is_array($value)) {
+                continue;
+            }
+
+            if (isset($value['$ref']) && is_string($value['$ref'])) {
+                foreach (self::EXTERNAL_REF_SOURCES as $documentPath => $_url) {
+                    $prefix = $documentPath . '#/components/schemas/';
+                    if (str_starts_with($value['$ref'], $prefix)) {
+                        $value['$ref'] = '#/components/schemas/' . substr($value['$ref'], strlen($prefix));
+                        break;
+                    }
+                }
+            }
+
+            self::rewriteExternalRefs($value);
+        }
+    }
+
+    /**
+     * Replace operation response refs like `$ref: #/components/responses/X`
+     * with the actual response definition from components.responses.
+     */
+    private static function inlineComponentResponses(array &$spec): void
+    {
+        $componentResponses = $spec['components']['responses'] ?? [];
+        if ($componentResponses === [] || ! isset($spec['paths'])) {
+            return;
+        }
+
+        foreach ($spec['paths'] as &$methods) {
+            if (! is_array($methods)) {
+                continue;
+            }
+            foreach ($methods as &$methodDef) {
+                if (! is_array($methodDef) || ! isset($methodDef['responses'])) {
+                    continue;
+                }
+                foreach ($methodDef['responses'] as $code => &$response) {
+                    if (! is_array($response) || ! isset($response['$ref'])) {
+                        continue;
+                    }
+                    $ref = $response['$ref'];
+                    $prefix = '#/components/responses/';
+                    if (! str_starts_with($ref, $prefix)) {
+                        continue;
+                    }
+                    $name = substr($ref, strlen($prefix));
+                    if (isset($componentResponses[$name])) {
+                        $response = $componentResponses[$name];
+                    }
+                }
+                unset($response);
+            }
+            unset($methodDef);
+        }
+        unset($methods);
     }
 
     /**

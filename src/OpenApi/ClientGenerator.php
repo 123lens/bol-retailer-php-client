@@ -10,7 +10,9 @@ class ClientGenerator
 
     protected static $overrideMethodNames = [
         'postShippingLabel' => 'createShippingLabel',
-        'postInbound' => 'createInbound'
+        'postInbound' => 'createInbound',
+        'getSingleEconomicOperator' => 'getEconomicOperator',
+        'getAllEconomicOperators' => 'queryEconomicOperator',
     ];
 
     protected static $overrideEnumNames = [
@@ -33,7 +35,8 @@ class ClientGenerator
     {
         $specs = (new SwaggerSpecs())->load(__DIR__ . '/retailer.json')
             ->merge((new SwaggerSpecs())->load(__DIR__ . '/shared.json'))
-            ->merge((new SwaggerSpecs())->load(__DIR__ . '/offers.json'));
+            ->merge((new SwaggerSpecs())->load(__DIR__ . '/offers.json'))
+            ->merge((new SwaggerSpecs())->load(__DIR__ . '/economic-operators.json'));
         $this->specs = $specs->getSpecs();
     }
 
@@ -300,7 +303,7 @@ class ClientGenerator
                 'description' => $parameter['description'] ?? null,
                 'in' => $parameter['in'],
                 'paramName' => null,
-                'required' => $parameter['required']
+                'required' => $parameter['required'] ?? false
             ];
 
             if ($parameter['in'] == 'query' && isset($parameter['schema']['$ref'])) {
@@ -578,8 +581,8 @@ class ClientGenerator
                 if (isset($refSchema['properties'][$property]['type'], $refSchema['properties'][$property]['items']['$ref']) && $refSchema['properties'][$property]['type'] == 'array') {
                     return [
                         'doc' => 'Model\\' . $this->getType(
-                                $refSchema['properties'][$property]['items']['$ref']
-                            ) . '[]',
+                            $refSchema['properties'][$property]['items']['$ref']
+                        ) . '[]',
                         'php' => 'array',
                         'property' => $property
                     ];

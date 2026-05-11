@@ -144,4 +144,115 @@ class ClientTest extends TestCase
         $reducedOrders = $this->client->getOrders();
         $this->assertEquals([], $reducedOrders);
     }
+
+    // --- Economic Operator endpoints (v1) ---
+
+    public function testGetEconomicOperatorSendsCorrectRequest()
+    {
+        $captured = $this->captureRequestAndReturnFixture('200-economic-operator');
+
+        $operator = $this->client->getEconomicOperator('0c6573a2-a80c-48b7-a03e-d5939f1173fa');
+
+        $this->assertEquals('GET', $captured->method);
+        $this->assertStringEndsWith(
+            '/retailer/economic-operator/0c6573a2-a80c-48b7-a03e-d5939f1173fa',
+            $captured->url
+        );
+        $this->assertEquals('application/vnd.economic-operator.v1+json', $captured->options['headers']['Accept']);
+
+        $this->assertInstanceOf(\Picqer\BolRetailerV10\Model\EconomicOperator::class, $operator);
+        $this->assertEquals('0c6573a2-a80c-48b7-a03e-d5939f1173fa', $operator->id);
+        $this->assertInstanceOf(\Picqer\BolRetailerV10\Model\EconomicOperatorAddress::class, $operator->address);
+        $this->assertEquals('Utrecht', $operator->address->city);
+        $this->assertInstanceOf(\Picqer\BolRetailerV10\Model\ContactInformation::class, $operator->contactInformation);
+        $this->assertEquals(\Picqer\BolRetailerV10\Enum\EconomicOperatorStatus::VALID, $operator->status);
+    }
+
+    public function testQueryEconomicOperatorSendsCorrectRequest()
+    {
+        $captured = $this->captureRequestAndReturnFixture('200-economic-operators-page');
+
+        $page = $this->client->queryEconomicOperator('Acme', 1, 25);
+
+        $this->assertEquals('GET', $captured->method);
+        $this->assertStringContainsString('/retailer/economic-operators', $captured->url);
+        $this->assertEquals(
+            ['name' => 'Acme', 'page' => 1, 'page-size' => 25],
+            $captured->options['query']
+        );
+        $this->assertEquals('application/vnd.economic-operator.v1+json', $captured->options['headers']['Accept']);
+
+        $this->assertInstanceOf(\Picqer\BolRetailerV10\Model\EconomicOperatorsPage::class, $page);
+        $this->assertCount(1, $page->operators);
+        $this->assertInstanceOf(\Picqer\BolRetailerV10\Model\EconomicOperator::class, $page->operators[0]);
+        $this->assertInstanceOf(\Picqer\BolRetailerV10\Model\EconomicOperatorPage::class, $page->page);
+        $this->assertEquals(1, $page->page->totalCount);
+    }
+
+    public function testCreateEconomicOperatorSendsCorrectRequest()
+    {
+        $captured = $this->captureRequestAndReturnFixture('200-economic-operator');
+
+        $request = new \Picqer\BolRetailerV10\Model\CreateEconomicOperator();
+        $request->name = 'Acme B.V.';
+
+        $this->client->createEconomicOperator($request);
+
+        $this->assertEquals('POST', $captured->method);
+        $this->assertStringEndsWith('/retailer/economic-operator', $captured->url);
+        $this->assertEquals('application/vnd.economic-operator.v1+json', $captured->options['headers']['Accept']);
+        $this->assertEquals('application/vnd.economic-operator.v1+json', $captured->options['headers']['Content-Type']);
+        $this->assertEquals(json_encode(['name' => 'Acme B.V.']), $captured->options['body']);
+    }
+
+    public function testUpdateEconomicOperatorSendsCorrectRequest()
+    {
+        $captured = $this->captureRequestAndReturnFixture('200-economic-operator');
+
+        $request = new \Picqer\BolRetailerV10\Model\UpdateEconomicOperator();
+        $request->name = 'Acme Updated';
+
+        $this->client->updateEconomicOperator('abc-123', $request);
+
+        $this->assertEquals('PUT', $captured->method);
+        $this->assertStringEndsWith('/retailer/economic-operator/abc-123', $captured->url);
+        $this->assertEquals('application/vnd.economic-operator.v1+json', $captured->options['headers']['Content-Type']);
+        $this->assertEquals(json_encode(['name' => 'Acme Updated']), $captured->options['body']);
+    }
+
+    public function testDeleteEconomicOperatorSendsCorrectRequest()
+    {
+        $captured = $this->captureRequestAndReturnFixture('200-economic-operator');
+
+        $this->client->deleteEconomicOperator('abc-123');
+
+        $this->assertEquals('DELETE', $captured->method);
+        $this->assertStringEndsWith('/retailer/economic-operator/abc-123', $captured->url);
+        $this->assertEquals('application/vnd.economic-operator.v1+json', $captured->options['headers']['Accept']);
+    }
+
+    /**
+     * Captures the next HTTP request the client makes and returns the given fixture
+     * as the response. Returns a stdClass with method, url, options properties
+     * that the mock callback writes into.
+     */
+    private function captureRequestAndReturnFixture(string $fixture): \stdClass
+    {
+        $captured = new \stdClass();
+        $captured->method = null;
+        $captured->url = null;
+        $captured->options = null;
+
+        $response = Message::parseResponse(file_get_contents(__DIR__ . '/Fixtures/http/' . $fixture));
+
+        $this->httpClientMock->method('request')
+            ->willReturnCallback(function ($method, $url, $options) use ($captured, $response) {
+                $captured->method = $method;
+                $captured->url = $url;
+                $captured->options = $options;
+                return $response;
+            });
+
+        return $captured;
+    }
 }
