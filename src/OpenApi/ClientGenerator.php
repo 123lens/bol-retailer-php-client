@@ -581,8 +581,8 @@ class ClientGenerator
                 if (isset($refSchema['properties'][$property]['type'], $refSchema['properties'][$property]['items']['$ref']) && $refSchema['properties'][$property]['type'] == 'array') {
                     return [
                         'doc' => 'Model\\' . $this->getType(
-                                $refSchema['properties'][$property]['items']['$ref']
-                            ) . '[]',
+                            $refSchema['properties'][$property]['items']['$ref']
+                        ) . '[]',
                         'php' => 'array',
                         'property' => $property
                     ];
