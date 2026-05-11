@@ -1,0 +1,25 @@
+HTTP/1.1 200 OK
+Server: nginx
+Date: Sun, 11 May 2026 08:00:00 GMT
+Content-Type: application/vnd.economic-operator.v1+json;charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+
+{
+  "id": "0c6573a2-a80c-48b7-a03e-d5939f1173fa",
+  "externalReference": "external-reference",
+  "name": "Acme B.V.",
+  "address": {
+    "street": "Papendorpseweg",
+    "houseNumber": "27-A",
+    "additionalAddressInfo": "Floor 7",
+    "postalCode": "3528 BJ",
+    "city": "Utrecht",
+    "country": "NL"
+  },
+  "contactInformation": {
+    "emailAddress": "mail@acme.test",
+    "phoneNumber": "+31623456787"
+  },
+  "status": "VALID"
+}
